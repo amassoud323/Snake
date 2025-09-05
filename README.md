@@ -1,0 +1,1 @@
+I extensively followed this tutorial (https://www.freecodecamp.org/news/how-to-build-a-snake-game-using-phaserjs/) to create this.
