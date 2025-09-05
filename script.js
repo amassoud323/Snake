@@ -51,3 +51,81 @@ new Phaser.Game(config);
 // Snake state
 let snake; // Array of grid cells [{x, y}, etc. ]; index[0] = snake's head
 let snakeRects; // Array of Phaser rectangles that constitute snake body
+let direction; // Current direction of snake movement
+let nextDirection; //Next direction chosen by player input
+let food; // Current food cell {x, y}
+let score = 0; // Current score count, starting from 0
+let scoreText; // Phaser object that displays score
+let moveEvent; // Phaser timer event to move snake at fixed intervals
+let speedMs = 130; // Delay in milliseconds between moves (lower = faster)
+
+// Input state
+let cursors; // Phaser helper object for arrow keys
+let spaceKey; // Phaser key object for space bar (restart the game)
+
+// Function to convert a grid cell to the centre of the canvas (used for respawning?)
+function gridToPixelCenter(x, y) {
+  return { px: x * tile + tile / 2, py: y * tile + tile / 2};
+}
+
+// Function to select a random unoccupied cell (useful e.g. for spawning food)
+function randomFreeCell(excludeCells) {
+  // create a lookup table of occupied cells to avoid choosing. 
+  const occupied = new Set(excludeCells.map(c => `${c.x},${c.y}`));
+  while (true) {
+    // Generate a random x and y coordinate
+    const x = Math.floor(Math.random() * columns);
+    const y = Math.floor(Math.random() * rows);
+
+    // Check if randomly generated cell is not in occupied set. If it's free, return it as an object {x,y}
+    if (!occupied.has(`${x},${y}`)) return { x, y };
+  }
+}
+
+// Function to prevent snake from turning 180° on itself. Checks if a direction 'a' is exactly the opposite of direction 'b'
+function isOpposite(a, b) {
+  return a.x === b.x && a.y === b.y;
+}
+
+// Part 3 (Preload and Create)
+
+// preload function -- there's nothing to preload, so leave it empty
+function preload() {}
+
+// create function
+function create() {
+  // map arrow keys
+  cursors = this.input.keyboard.createCursorKeys();
+
+  // map spacebar to game restart
+  spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+  // initialise game state (snake, food, score, timer)
+  initGame.call(this)
+}
+
+// Part 4 (Initialise the game)
+
+function initGame() {
+  // if an old movement timer exists, stop it (so only one timer is running)
+  if (moveEvent) moveEvent.remove(false);
+
+  // if old snake rectangles exist, remove them
+  if (snakeRects) snakeRects.forEach(r => r.destroy());
+
+  // Reset the score and snake direction
+  score = 0;
+  direction = DIR.right;
+  nextDirection = DIR.right;
+
+  // Find the starting position near centre of grid
+  const startX = Math.floor(columns/2);
+  const startY = Math.floor(rows/2);
+
+  // Start the snake with 3 segments -- a head and 2 body pieces
+  snake = [
+    { x: startX,     y: startY }, // head
+    { x: startX - 1, y: startY }, // first body segment
+    { x: startX - 2, y: startY } // second body segment
+  ];
+}
