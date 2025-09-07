@@ -1,4 +1,4 @@
-// Part 1 (Grid, Colours, Game Config)
+// 1. Grid, Colours, Game Config
 
 // set size of one grid tile in pixels
 const tile = 16;
@@ -46,7 +46,7 @@ const config = {
 // create a new Phaser game with above config
 new Phaser.Game(config);
 
-// Part 2 (States and Helper Functions)
+// 2. States and Helper Functions
 
 // Snake state
 let snake; // Array of grid cells [{x, y}, etc. ]; index[0] = snake's head
@@ -87,7 +87,7 @@ function isOpposite(a, b) {
   return a.x === b.x && a.y === b.y;
 }
 
-// Part 3 (Preload and Create)
+// 3. Preload and Create
 
 // preload function -- there's nothing to preload, so leave it empty
 function preload() {}
@@ -104,7 +104,7 @@ function create() {
   initGame.call(this)
 }
 
-// Part 4 (Initialise the game)
+// 4. Initialise the game
 
 function initGame() {
   // if an old movement timer exists, stop it (so only one timer is running)
@@ -128,4 +128,78 @@ function initGame() {
     { x: startX - 1, y: startY }, // first body segment
     { x: startX - 2, y: startY } // second body segment
   ];
+}
+
+// Create snake segments in Phaser using rectangles
+snakeRects = snake.map((cell, i) => { //loop through each segment of the snake array (i = the index)
+  const { px, py } = gridToPixelCenter(cell.x, cell.y); // converts grid coordinates to pixel coords at the centre
+  const color = i === 0 ? colours.head : colours.body; // sets colour; if head, use head colour, otherwise use body colour (? is shorthand for if/else)
+  const rect = this.add.rectangle(px, py, tile - 2, tile - 2, color); // creates the new rectangle, makes it 2px smaller than the tile size for spacing
+  rect.setOrigin(0.5, 0.5); // sets origin of the rectangle to the centre
+  return rect;
+});
+
+// Spawn food at a random free cell (make sure snake isn't overlapping the cell)
+food = randomFreeCell(snake);
+const { px, py } = gridToPixelCenter(food.x, food.y);
+
+// If food already exists from a previous game, remove it
+if (this.foodRect) this.foodRect.destroy();
+
+// Draw new food (same code as to draw new snake rectangles, but just using food colour)
+this.foodRect = this.add.rectangle(px, py, tile - 2, tile - 2, colours.food);
+
+// Create score text (or, on restart, reset its value)
+if (!scoreText) {
+  scoreText = this.add.text(8, 6, "Score: 0", { fontFamily: "monospace", fontSize: 18, color: "#fff"});
+  this.add.text(8, 28, "Use arrows to move. Use space to restart.", { fontFamily: "monospace", fontSize: 14, color: "#aaa"});
+} else {
+  scoreText.setText("Score: 0");
+}
+
+// Reset speed and create a repeating timer.
+// Every 'speedMs' milliseconds, stepSnake() will run to move the snake
+speedMs = 130;
+moveEvent = this.time.addEvent({ // creates the repeating timer, which will trigger at set time interval
+  delay: speedMs, // sets the time interval
+  loop: true, // makes the timer repeat indefinitely, so the snake keeps moving
+  callback: () => stepSnake.call(this) // sets the function to run on each timer tick -- calls stepSnake, and binds (this) to the current Phaser scene context
+});
+
+// Removing any preexisting 'game over' message from a previous attempt
+if (this.gameOverText) {
+  this.gameOverText.destroy();
+  this.gameOverText = null;
+}
+
+// 5. Reading Input
+
+/* update():
+    - runs each game loop
+    - reads player input from arrow keys (note, player doesn't need to hold down keys to move snake; simply set the direction of movement using arrow keys)
+    - updates "nextDirection" so snake turns on next frame if key pressed
+    - listens for space bar press to restart game
+*/
+function update() {
+  // check if LEFT arrow pressed AND not opposite direction
+  if (cursors.left.isDown && !isOpposite(directions.left, direction)) {
+    nextDirection = directions.left;
+  
+  // check if RIGHT arrow pressed  
+  } else if (cursors.right.isDown && !isOpposite(directions.right, direction)) {
+    nextDirection = directions.right;
+
+  // check if UP arrow pressed  
+  } else if (cursors.up.isDown && !isOpposite(directions.up, direction)) {
+    nextDirection = directions.up;
+
+  // check if DOWN arrow pressed
+  } else if (cursors.down.isDown && !isOpposite(directions.down, direction)) {
+    nextDirection = directions.down;
+  }
+
+  // if game over AND space bar pressed -> restart game
+  if (this.gameOverText && Phaser.Input.Keyboard.JustDown(spaceKey)) {
+    initGame.call(this); // Reset everything (snake, food, score, etc.)
+  }
 }
