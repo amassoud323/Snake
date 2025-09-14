@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
   <title>Snake</title>
 </head>
 <body>
-  <h1>Snake</h1>
-  <div id="game"></div>
-  <h3>Rules</h3>
-  <p>Don't let the snake collide with the walls or itself!</p>
-  <h3>Controls</h3>
-  <p>Use arrow keys to change snake's direction. Press space to restart after a game over.</p>
+  <div class="container">
+    <h1>Snake</h1>
+    <p class="mobile-notice">Please rotate screen to play</p>
+    <div id="game"></div>
+  </div>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
   <script src="script.js"></script>
+  <footer>Written by Adam Massoud</footer>
 </body>
 </html>
