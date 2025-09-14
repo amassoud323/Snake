@@ -84,7 +84,7 @@ function randomFreeCell(excludeCells) {
 
 // Function to prevent snake from turning 180° on itself. Checks if a direction 'a' is exactly the opposite of direction 'b'
 function isOpposite(a, b) {
-  return a.x === b.x && a.y === b.y;
+  return a.x === -b.x && a.y === -b.y;
 }
 
 // 3. Preload and Create
@@ -115,8 +115,8 @@ function initGame() {
 
   // Reset the score and snake direction
   score = 0;
-  direction = DIR.right;
-  nextDirection = DIR.right;
+  direction = directions.right;
+  nextDirection = directions.right;
 
   // Find the starting position near centre of grid
   const startX = Math.floor(columns/2);
@@ -128,7 +128,7 @@ function initGame() {
     { x: startX - 1, y: startY }, // first body segment
     { x: startX - 2, y: startY } // second body segment
   ];
-}
+
 
 // Create snake segments in Phaser using rectangles
 snakeRects = snake.map((cell, i) => { //loop through each segment of the snake array (i = the index)
@@ -171,7 +171,7 @@ if (this.gameOverText) {
   this.gameOverText.destroy();
   this.gameOverText = null;
 }
-
+}
 // 5. Reading Input
 
 /* update():
@@ -202,4 +202,147 @@ function update() {
   if (this.gameOverText && Phaser.Input.Keyboard.JustDown(spaceKey)) {
     initGame.call(this); // Reset everything (snake, food, score, etc.)
   }
+}
+
+// 6. Stepping the Snake, Eating, and Drawing
+
+/* stepSnake()
+   This functions runs every 'tick' (based on timer)
+   - Moves the snake forward by one cell
+   - Checks for collisions (wall or self)
+   - Handles eating food (grow and add to score)
+   - Updates the snake's rectangles on the screen
+*/
+function stepSnake() {
+  // Apply the direction chosen in update() (queued by player input with keys)
+  direction = nextDirection;
+
+  // Get the current head of the snake
+  const head = snake[0];
+
+  // Create new head position by moving one cell in current direction
+  const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+
+  // Collision check 1: wall
+  // If the new head is outside the grid, the game ends
+  if (newHead.x < 0 || newHead.x >= columns || newHead.y < 0 || newHead.y >= rows) {
+    return endGame.call(this); 
+  }
+
+  // Collision check 2: self
+  // If the new head overlaps any existing snake cell, the game ends
+  for (let i = 0; i < snake.length; i++) {
+    if (snake[i].x === newHead.x && snake[i].y === newHead.y) {
+      return endGame.call(this);
+    }
+  }
+
+  // Check if food was eaten
+  const ate = newHead.x === food.x && newHead.y === food.y;
+
+  // == Add new head cell to the front of the snake ==
+  snake.unshift(newHead);
+
+  if (!ate) {
+    // If snake didn't eat anything, keep length the same
+    // (i.e. remove the last cell from the snake while adding the new head)
+    snake.pop()
+
+    // Reuse the last rectangle object for performance
+    const tailRect = snakeRects.pop();
+    const { px, py} = gridToPixelCenter(newHead.x, newHead.y);
+    tailRect.setPosition(px, py); // Move it to the new head
+    snakeRects.unshift(tailRect); // Put it at the front of the snake
+  } else {
+    // Snake did eat something, -> grow longer
+    const { px, py} = gridToPixelCenter(newHead.x, newHead.y);
+    const headRect = this.add.rectangle(px, py, tile - 2, tile -2, colours.head);
+    snakeRects.unshift(headRect);
+
+    // Increase and update score
+    score += 10;
+    scoreText.setText(`Score: ${score}`);
+
+    // Place new food somewhere else on the grid
+    placeFood.call(this);
+
+    // Speed up slightly to increase difficulty as game continues
+    maybeSpeedUp.call(this);
+  }
+
+  // == Update colours ==
+  // Ensure only index 0 is drawn as 'head', and rest is 'body'
+  if (snakeRects[1]) snakeRects[1].setFillStyle(colours.body);
+  snakeRects[0].setFillStyle(colours.head);
+}
+
+// 7. Spawning FOod and Increasing Speed
+
+/* placeFood()
+   - Spawns food at a new random cell that isn't part of snake
+   - Uses randomFreeCell() to avoid collisions with the snake
+   - Moves the existing foodRect to the new spot
+*/
+function placeFood() {
+  // Pick a random free cell on the grid not occupied by snake
+  food = randomFreeCell(snake);
+
+  // Convert that cell into pixel coordinates
+  const { px, py } = gridToPixelCenter(food.x, food.y);
+
+  // Move existing food rectangle to the new position
+  this.foodRect.setPosition(px, py);
+}
+
+/* maybeSpeedUp()
+   - Slightly increases difficulty each time food is eaten
+   - Decreases move delay (i.e. snake moves faster)
+   - Restarts the timer with new speed
+   - Stops speeding up once a lower bound is reached
+*/
+function maybeSpeedUp() {
+  // Only speed up if the current speed is above minimum threshold (70ms)
+  if (speedMs > 70) {
+    // Increase speed by reducing the delay
+    speedMs -= 3;
+
+    // Remove the old movement timer
+    moveEvent.remove(false);
+
+    // Create a new timer with the updated speed
+    moveEvent = this.time.addEvent({
+      delay: speedMs,     // shorter delay -> faster movement
+      loop: true,         // repeat indefinitely until game over
+      callback: () => stepSnake.call(this)  // keep "this" as the scene
+    });
+  }
+}
+
+// 8. Game Over and Restart
+
+/* endGame()
+    - Called when snake hits wall or itself
+    - Stops movement timer (snake no longer moves)
+    - Displays "game over" message with the final score
+    - Waits for the player to press Space (handled in update()) to restart
+*/
+
+function endGame() {
+  // Stop movement timer so snake no longer steps forward
+  moveEvent.remove(false);
+
+  // Define text style for the 'game over' message
+  const style = {
+    fontFamily: "monospace",
+    fontSize: 28,
+    color: "#fff",
+    align: "center"
+  };
+
+  // Message shows "game over", final score, and restart instructions
+  const msg = `Game Over\nScore: ${score}\nPress Space to Restart`;
+
+  // Add text to the centre of the screen
+  // .setOrigin(0.5, 0.5) makes the text anchor at its centre
+  this.gameOverText = this.add.text(width / 2, height / 2, msg, style).setOrigin(0.5, 0.5);
 }

@@ -1,1 +1,1 @@
-I extensively followed this tutorial (https://www.freecodecamp.org/news/how-to-build-a-snake-game-using-phaserjs/) to create this.
+I extensively followed this tutorial (https://www.freecodecamp.org/news/how-to-build-a-snake-game-using-phaserjs/) to create this (pretty much word for word). I think in general following a tutorial so closely isn't ideal for learning, but as a near-total JS beginner, I've found it a useful demonstration of how theoretical things I've learnt can actually be implemented.
